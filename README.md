@@ -3,14 +3,15 @@
   The features retained during the tuning of the model will be made available and visualized on a player page to show relevant information.
 
 ##Plan
-  Crawl the data from the api:
+  * Crawl the data from the api:
     * previous matches information
     * current division of the players (and historical if available)
-  store the result of the api queries
-  process it:
+  
+  * store the result of the api queries
+  * process it:
     for each player we use the info of their previous matches to generate features for every match observation (using only information available at the time the match was played, so for example for match 10 we will only use info from match 1 to 9)
 
-  Train a neural network that is fed the historical features of the present players predicting which team will win
+  * Train a neural network that is fed the historical features of the present players predicting which team will win
 
 ##Data Description
   To sumarize, we will keep aggregated information (at the match level) on player performance, role played, identity of the players and final result for each of their played games.
