@@ -1,17 +1,7 @@
-import json
 from itertools import chain
-from riotAPI import RiotAPI, EUNE_ENDPOINT
 
 
-MoegamiID = 20391818
-
-with open('api_key.txt') as f:
-    API_KEY = f.read().strip()
-
-riotAPI = RiotAPI(EUNE_ENDPOINT, API_KEY)
-
-
-def get_random_summonerId():
+def get_random_summonerId(riotAPI):
     r = riotAPI.featuredgames()
     participants = chain.from_iterable(x['participants'] for x in r['gameList'])
     summonerNames = [x['summonerName'] for x in participants if not x['bot']]
@@ -26,35 +16,29 @@ def extract_matchIds(matchList):
         return[]
 
 
-def extract_participantIds(match):
+def extract_summonerIds(match):
     return [pIdentity['player']['summonerId'] for pIdentity in match['participantIdentities']]
 
 
-def BFS(matchesPerSummoner, summonersNum, startID=None):
-    if startID is None:
-        startID = get_random_summonerId()
+def crawl(riotAPI, matchesPerSummoner, summonersNum, startId=None):
+    if startId is None:
+        startId = get_random_summonerId(riotAPI)
     
-    avaiableSummoners = set([startID])
+    avaiableSummoners = set([startId])
     processedSummoners = {}
     matches = {}
     while len(processedSummoners) < summonersNum:
-        summoner = avaiableSummoners.pop()
-        r = riotAPI.matchlist(summoner)
+        summonerId = avaiableSummoners.pop()
+        r = riotAPI.matchlist(summonerId)
         matchIds = extract_matchIds(r)[:matchesPerSummoner]
-        processedSummoners[summoner] = matchIds
-        newMatchIds = [matchId for matchId in matchIds if matchId not in matches]
-        newMatches = [riotAPI.match(matchId) for matchId in matchIds]
-        matches.update(dict(zip(newMatchIds, newMatches)))
-        participantIds = chain.from_iterable(extract_participantIds(match) for match in newMatches)
-        newSummoners = [participantId for participantId in participantIds if participantId not in processedSummoners]
-        avaiableSummoners.update(set(newSummoners))
+        processedSummoners[summonerId] = matchIds
+        newMatches = [(mId, riotAPI.match(mId)) for mId in matchIds if mId not in matches]
+        matches.update(dict(newMatches))
+        summonerIds = chain.from_iterable(extract_summonerIds(m[1]) for m in newMatches)
+        newSummonerIds = [sId for sId in summonerIds if sId not in processedSummoners]
+        avaiableSummoners.update(set(newSummonerIds))
 
     return {
         'summoners': processedSummoners,
         'matches': matches,
     }
-
-
-if __name__ == '__main__':
-    result = BFS(5, 5)
-    print(json.dumps(result))
