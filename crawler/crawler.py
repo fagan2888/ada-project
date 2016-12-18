@@ -17,6 +17,10 @@ def extract_matchIds(matchList):
 
 
 def extract_summonerIds(match):
+    if 'participantIdentities' not in match:
+        print("'participantIdentities' missing in match!", file=sys.stderr)
+        print(match, file=sys.stderr)
+        return []
     return [pIdentity['player']['summonerId'] for pIdentity in match['participantIdentities']]
 
 
