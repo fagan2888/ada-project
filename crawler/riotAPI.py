@@ -40,7 +40,7 @@ class RiotAPI:
 
     def match(self, matchId):
         url = self.formatURL('match', matchId=matchId)
-        r = self.get(url, params={'api_key': self.api_key})
+        r = self.get(url, params={'api_key': self.api_key, 'includeTimeline': 'false'})
         return r.json()
 
     def featuredgames(self):
