@@ -17,11 +17,11 @@ class RiotAPI:
     }
     URLs = {key: 'https://{host}' + val for key, val in APIPaths.items()}
 
-    def __init__(self, regionalEndpoint, api_key):
+    def __init__(self, regionalEndpoint, api_key, keyType):
         self.commonURLParams = \
             {key: val.lower() for key, val in regionalEndpoint._asdict().items()}
         self.api_key = api_key
-        self.rateController = RateController()
+        self.rateController = RateController(keyType)
 
     def formatURL(self, key, **kwargs):
         return self.URLs[key].format(**kwargs, **self.commonURLParams)

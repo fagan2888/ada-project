@@ -10,7 +10,7 @@ if __name__ == '__main__':
     with open('api_key.txt') as f:
         API_KEY = f.read().strip()
 
-    riotAPI = RiotAPI(EUNE_ENDPOINT, API_KEY)
+    riotAPI = RiotAPI(EUNE_ENDPOINT, API_KEY, 'production')
 
-    result = crawl(riotAPI, 5, 5)
+    result = crawl(riotAPI, 100, 100)
     print(json.dumps(result))

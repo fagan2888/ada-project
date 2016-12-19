@@ -4,16 +4,24 @@ import requests
 
 
 class RateController:
-    def __init__(self):
+    windowLimitsByKeyType = {
+        'development': {
+            10: 10,
+            600: 500,
+        },
+        'production': {
+            10: 3000,
+            600: 180000,
+        }
+    }
+
+    def __init__(self, keyType):
         t = time.time()
         self.windowBegins = {
             10: t,
             600: t,
         }
-        self.windowLimits = {
-            10: 10,
-            600: 500,
-        }
+        self.windowLimits = self.windowLimitsByKeyType[keyType]
 
     def getLimitCounts(self, countsStr):
         x, y = countsStr.split(',')
@@ -44,8 +52,6 @@ class RateController:
 
         if status_code == 429 and 'Retry-After' not in headers:
             print('Underlying service raised 429 independently of API infrastracture', file=sys.stderr)
-            print('Waiting 1 second...', file=sys.stderr)
-            time.sleep(1)
 
         for (windowSize, count) in limitCounts.items():
             if count >= self.windowLimits[windowSize]:
