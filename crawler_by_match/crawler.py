@@ -81,11 +81,11 @@ def crawl(riotAPI, matchesPerSummoner, matchesNum, startId):
     print(len(available_matches))
     print(processed_matches)
 
-    return {
-        'processed_matches': processed_matches,
-        'summoners': summ_matches,
-        'matches': matches,
-    }
+    return (
+        processed_matches,
+        summ_matches,
+        matches,
+    )
 
 
 
