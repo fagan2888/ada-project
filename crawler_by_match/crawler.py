@@ -8,10 +8,22 @@ from collections import defaultdict
 
 # def get_random_summonerId(riotAPI):
 #     r = riotAPI.featuredgames()
-#     participants = chain.from_iterable(x['participants'] for x in r['gameList'])
-#     summonerNames = [x['summonerName'] for x in participants if not x['bot']]
+#     participants = chain.from_iterable(x["participants"] for x in r["gameList"])
+#     summonerNames = [x["summonerName"] for x in participants if not x["bot"]]
 #     r2 = riotAPI.summoner(summonerNames[:1])
-#     return [summonerDto['id'] for summonerDto in r2.values()][0]
+#     return [summonerDto["id"] for summonerDto in r2.values()][0]
+
+allowed_queue_types = (
+    "NORMAL_5x5_BLIND",
+    "RANKED_SOLO_5x5",
+    "RANKED_PREMADE_5x5",
+    "NORMAL_5x5_DRAFT",
+    "RANKED_TEAM_5x5",
+    "TEAM_BUILDER_DRAFT_UNRANKED_5x5",
+    "TEAM_BUILDER_DRAFT_RANKED_5x5",
+    "TEAM_BUILDER_RANKED_SOLO",
+    "RANKED_FLEX_SR"
+    )
 
 def merge_dicts(old, to_add):
     for k, v in to_add.items():
@@ -19,18 +31,54 @@ def merge_dicts(old, to_add):
 
 
 def extract_matchIds(matchList):
-    if matchList['totalGames'] > 0:
-        return [match['matchId'] for match in matchList['matches']]
+    if "totalGames" in matchList and matchList["totalGames"] > 0:
+        return [str(match["matchId"]) for match in matchList["matches"] if match["queue"] in allowed_queue_types]
     else:
         return[]
 
 
 def extract_summonerIds(match):
-    if 'participantIdentities' not in match:
+    if "participantIdentities" not in match:
         print("'participantIdentities' missing in match!", file=sys.stderr)
         print(match, file=sys.stderr)
         return []
-    return {pIdentity['player']['summonerId'] for pIdentity in match['participantIdentities']}
+    return {pIdentity["player"]["summonerId"] for pIdentity in match["participantIdentities"]}
+
+def getKeyOrMissing(path, key):
+    if key in path:
+        return path[key]
+    else:
+        return -1
+
+
+def process_participant(participant, participantIdentity):
+    return {
+        "summonerId": str(participantIdentity["player"]["summonerId"]),
+        "lane": participant["timeline"]["lane"],
+        "role": participant["timeline"]["role"],
+        "team": "blue" if (participant["teamId"] == 100) else "purple",
+        "winner": participant["stats"]["winner"],
+        "goldEarned": participant["stats"]["goldEarned"]
+        # "gpm10": getKeyOrMissing(participant["timeline"]["goldPerMinDeltas"], "zeroToTen"),
+        # "gpm20": participant["timeline"]["goldPerMinDeltas"]["tenToTwenty"],
+        # "gpm30": participant["timeline"]["goldPerMinDeltas"]["twentyToThirty"],
+        # "gpmToEnd": participant["timeline"]["goldPerMinDeltas"]["thirtyToEnd"]
+    }
+
+def process_match(match):
+    if ("status" in match): # fix for 404
+        return None
+
+    return {
+        "matchId": str(match["matchId"]),
+        "region": match["region"],
+        "queueType": match["queueType"],
+        "matchDuration": match["matchDuration"],
+        "participants": [process_participant(participant, participantIdentity) for (participant, participantIdentity) in zip(match["participants"], match["participantIdentities"])]
+    }
+    # return match
+
+
 
 def get_last_matches(summoners_list, matches_keys, riotAPI, matchesPerSummoner):
     def get_matchlist(sid):
@@ -46,9 +94,9 @@ def get_last_matches(summoners_list, matches_keys, riotAPI, matchesPerSummoner):
 
     with concurrent.futures.ThreadPoolExecutor(max_workers = 50) as executor:
         future_to_match = {executor.submit(riotAPI.match, mId): mId for mId in matches_to_fetch}
-        matches = {future_to_match[future]: future.result() for future in concurrent.futures.as_completed(future_to_match)}
+        matches = {future_to_match[future]: process_match(future.result()) for future in concurrent.futures.as_completed(future_to_match)}
 
-    return (player_matches, matches)
+    return (player_matches, {match_id: match for match_id, match in matches.items() if match is not None})
 
 def crawl(riotAPI, matchesPerSummoner, matchesNum, startId):
     # if startId is None:
@@ -86,15 +134,3 @@ def crawl(riotAPI, matchesPerSummoner, matchesNum, startId):
         summ_matches,
         matches,
     )
-
-
-
- # summonerId = avaiableSummoners.pop()
- #        r = riotAPI.matchlist(summonerId)
- #        matchIds = extract_matchIds(r)[:matchesPerSummoner]
- #        processedSummoners[summonerId] = matchIds
- #        newMatches = [(mId, riotAPI.match(mId)) for mId in matchIds if mId not in matches]
- #        matches.update(dict(newMatches))
- #        summonerIds = chain.from_iterable(extract_summonerIds(m[1]) for m in newMatches)
- #        newSummonerIds = [sId for sId in summonerIds if sId not in processedSummoners]
- #        avaiableSummoners.update(set(newSummonerIds))
