@@ -6,36 +6,42 @@ import _root_.org.apache.spark.SparkContext._
 import _root_.org.apache.spark.SparkConf
 import _root_.org.apache.spark.sql.SaveMode
 
-
 import _root_.scala.collection.mutable.WrappedArray
 import _root_.org.apache.spark.sql.Row
 import _root_.org.apache.spark.sql.functions.{col, first}
 import _root_.org.apache.spark.sql.Column
 
-
 case class ParticipantInfo(
-    assists: Long,
-    cs10: Double,
-    cs20: Double,
-    csDiff10: Double,
-    csDiff20: Double,
-    deaths: Long,
-    goldEarned: Long,
-    gpm10: Double,
-    gpm20: Double,
-    kills: Long,
-    lane: String,
-    largestKillingSpree: Long,
-    role: String,
     summonerId: String,
+    lane: String,
+    role: String,
     team: String,
+    winner: Boolean,
+    goldEarned: Long,
+    kills: Long,
+    deaths: Long,
+    assists: Long,
+    largestKillingSpree: Long,
     totalDamageDealt: Long,
     totalDamageDealtToChampions: Long,
     totalDamageTaken: Long,
     totalTimeCrowdControlDealt: Long,
-    winner: Boolean,
+    csDiff10: Double,
+    cs10: Double,
+    gpm10: Double,
     xpDiff10: Double,
+    csDiff20: Double,
+    cs20: Double,
+    gpm20: Double,
     xpDiff20:Double
+)
+
+case class Match(
+    matchId: String,
+    matchDuration: Long,
+    region: String,
+    queueType: String,
+    participants: Array[ParticipantInfo]
 )
 
 case class ParticipantMatch(matchId: String, summ_id: String, p_match_id: String, summ_pos: Int, team: String, winner: Boolean,  matchDuration: Long, participants: Array[ParticipantInfo])
@@ -88,7 +94,44 @@ object Features {
 
     val summs_matches = sqlContext.read.json(inputPath + "summ_matches.json")
 
-    val matches = sqlContext.read.json(inputPath + "matches.json")
+    // val matches = sqlContext.read.json(inputPath + "matches.json")
+    val matches = sc.textFile(inputPath + "/matches.csv").map(_.split(',')).map(e => {
+        val participantsList = e.drop(4)
+
+        val participants = participantsList.grouped(22).map(x => ParticipantInfo(
+            x(0),
+            x(1),
+            x(2),
+            x(3),
+            x(4).toBoolean,
+            x(5).toLong,
+            x(6).toLong,
+            x(7).toLong,
+            x(8).toLong,
+            x(9).toLong,
+            x(10).toLong,
+            x(11).toLong,
+            x(12).toLong,
+            x(13).toLong,
+            x(14).toFloat,
+            x(15).toFloat,
+            x(16).toFloat,
+            x(17).toFloat,
+            x(18).toFloat,
+            x(19).toFloat,
+            x(20).toFloat,
+            x(21).toFloat
+            )
+        ).toArray
+
+        Match (
+            e(0),
+            e(1).toLong,
+            e(2),
+            e(3),
+            participants
+            )
+        }).toDF()
 
     // join processed_matches with the summoner_ids of that match (on match_id) and generate pos of the player
     val participants = processed_matches.join(matches, $"p_match_id" === $"matchId").drop("matchId").map(x => {
@@ -121,13 +164,13 @@ object Features {
             pos
         }
 
-        val participant_info = x(2) match {
+        val participant_info = x(4) match {
                 case matchInfo: WrappedArray[Row] => matchInfo.map(p => (
-                    generate_pos(p(10), p(12)), // pos_num (lane, role)
-                    p(13).asInstanceOf[String], // summoner_id
-                    p(14).asInstanceOf[String], // team
-                    p(19).asInstanceOf[Boolean], // winner
-                    p(6).asInstanceOf[Long] // gold (tmp for the pos finding)
+                    generate_pos(p(1), p(2)), // pos_num (lane, role)
+                    p(0).asInstanceOf[String], // summoner_id
+                    p(3).asInstanceOf[String], // team
+                    p(4).asInstanceOf[Boolean], // winner
+                    p(5).asInstanceOf[Long] // gold (tmp for the pos finding)
                 ))
             }
 
@@ -168,7 +211,6 @@ object Features {
     val participants_matches = participants_matches_ids_flat.join(matches.select($"matchId", $"matchDuration", $"participants"), "matchId").as[ParticipantMatch]
 
 
-    participants_matches_ids_flat.join(matches.select($"matchId", $"matchDuration"), "matchId")
     // generate features
     val features = participants_matches.groupBy($"p_match_id", $"summ_id", $"summ_pos", $"team", $"winner").flatMapGroups((key, rows) => {
         val summId = key(1).asInstanceOf[String]
@@ -210,7 +252,6 @@ object Features {
         /* totalDamageDealt */
         val totalDamageDealt = averageInt(_.totalDamageDealt.toInt)
 
-
         /* totalDamageDealtToChampions */
         val totalDamageDealtToChampions = averageInt(_.totalDamageDealtToChampions.toInt)
 
@@ -219,7 +260,6 @@ object Features {
 
        /* totalTimeCrowdControlDealt */
         val totalTimeCrowdControlDealt = averageInt(_.totalTimeCrowdControlDealt.toInt)
-
 
         /* timeline stuff */
         def averageDouble(getMember: ParticipantInfo => Double): Float = {
