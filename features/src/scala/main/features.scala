@@ -13,10 +13,55 @@ import _root_.org.apache.spark.sql.functions.{col, first}
 import _root_.org.apache.spark.sql.Column
 
 
-case class ParticipantInfo(goldEarned:Long, lane:String, role:String, summonerId:String, team:String, winner:Boolean)
+case class ParticipantInfo(
+    assists: Long,
+    cs10: Double,
+    cs20: Double,
+    csDiff10: Double,
+    csDiff20: Double,
+    deaths: Long,
+    goldEarned: Long,
+    gpm10: Double,
+    gpm20: Double,
+    kills: Long,
+    lane: String,
+    largestKillingSpree: Long,
+    role: String,
+    summonerId: String,
+    team: String,
+    totalDamageDealt: Long,
+    totalDamageDealtToChampions: Long,
+    totalDamageTaken: Long,
+    totalTimeCrowdControlDealt: Long,
+    winner: Boolean,
+    xpDiff10: Double,
+    xpDiff20:Double
+)
+
 case class ParticipantMatch(matchId: String, summ_id: String, p_match_id: String, summ_pos: Int, team: String, winner: Boolean,  matchDuration: Long, participants: Array[ParticipantInfo])
 
-case class Ret(winningTeam:String, matchId:String, playerNum:Int, winrate:Float, GPM: Float)
+case class Ret(
+    winningTeam: String,
+    matchId: String,
+    playerNum: Int,
+    winrate: Float,
+    GPM: Float,
+    KDA: Float,
+    KD: Float,
+    largestKillingSpree: Float,
+    totalDamageDealt: Float,
+    totalDamageDealtToChampions: Float,
+    totalDamageTaken: Float,
+    totalTimeCrowdControlDealt: Float,
+    cs10: Float,
+    cs20: Float,
+    csDiff10: Float,
+    csDiff20: Float,
+    gpm10: Float,
+    gpm20: Float,
+    xpDiff10: Float,
+    xpDiff20: Float
+)
 
 
 
@@ -78,11 +123,11 @@ object Features {
 
         val participant_info = x(2) match {
                 case matchInfo: WrappedArray[Row] => matchInfo.map(p => (
-                    generate_pos(p(1), p(2)), // pos
-                    p(3).asInstanceOf[String], // summoner_id
-                    p(4).asInstanceOf[String], // team
-                    p(5).asInstanceOf[Boolean], // winner
-                    p(0).asInstanceOf[Long] // gold (tmp for the pos finding)
+                    generate_pos(p(10), p(12)), // pos_num (lane, role)
+                    p(13).asInstanceOf[String], // summoner_id
+                    p(14).asInstanceOf[String], // team
+                    p(19).asInstanceOf[Boolean], // winner
+                    p(6).asInstanceOf[Long] // gold (tmp for the pos finding)
                 ))
             }
 
@@ -139,12 +184,60 @@ object Features {
         val totalGames = games.length
 
         /* winrate */
-        val wins = games.foldLeft(0)((acc, game)  => getInfos(game).winner.toInt + acc)
+        val wins = games.foldLeft(0)((acc, game) => getInfos(game).winner.toInt + acc)
 
         val winrate = wins.toFloat / totalGames
 
         /* GPM */
-        val GPM = 60f * games.foldLeft(0.toLong)((acc, game)  => getInfos(game).goldEarned + acc).toFloat / games.foldLeft(0.toLong)((acc, game)  => game.matchDuration + acc)
+        val GPM = 60f * games.foldLeft(0.toLong)((acc, game) => getInfos(game).goldEarned + acc).toFloat / games.foldLeft(0.toLong)((acc, game)  => game.matchDuration + acc)
+
+        /* KDA */
+        val kills = games.foldLeft(0)((acc, game) => getInfos(game).kills.toInt + acc)
+        val assists = games.foldLeft(0)((acc, game) => getInfos(game).assists.toInt + acc)
+        val deaths = games.foldLeft(0)((acc, game) => getInfos(game).deaths.toInt + acc)
+
+        val KDA = (kills+deaths).toFloat / math.max(deaths, 1)
+        val KD = kills.toFloat / math.max(deaths, 1)
+
+        def averageInt(getMember: ParticipantInfo => Int): Float = {
+            def summed = games.foldLeft(0)((acc, game) => getMember(getInfos(game)) + acc)
+            math.max(summed, 1).toFloat / totalGames
+        }
+
+        /* largestKillingSpree */
+        val largestKillingSpree = averageInt(_.largestKillingSpree.toInt)
+
+        /* totalDamageDealt */
+        val totalDamageDealt = averageInt(_.totalDamageDealt.toInt)
+
+
+        /* totalDamageDealtToChampions */
+        val totalDamageDealtToChampions = averageInt(_.totalDamageDealtToChampions.toInt)
+
+       /* totalDamageTaken */
+        val totalDamageTaken = averageInt(_.totalDamageTaken.toInt)
+
+       /* totalTimeCrowdControlDealt */
+        val totalTimeCrowdControlDealt = averageInt(_.totalTimeCrowdControlDealt.toInt)
+
+
+        /* timeline stuff */
+        def averageDouble(getMember: ParticipantInfo => Double): Float = {
+            def summed = games.foldLeft(0.0)((acc, game) => getMember(getInfos(game)) + acc)
+            math.max(summed, 1).toFloat / totalGames
+        }
+
+        val cs10 = averageDouble(_.cs10)
+        val cs20 = averageDouble(_.cs20)
+
+        val csDiff10 = averageDouble(_.csDiff10)
+        val csDiff20 = averageDouble(_.csDiff20)
+
+        val gpm10 = averageDouble(_.gpm10)
+        val gpm20 = averageDouble(_.gpm20)
+
+        val xpDiff10 = averageDouble(_.xpDiff10)
+        val xpDiff20 = averageDouble(_.xpDiff20)
 
         def computePlayerNum (pos: Int, team: String): Int = {
             if (team == "blue") pos
@@ -164,7 +257,8 @@ object Features {
                 key(2).asInstanceOf[Int], // pos
                 key(3).asInstanceOf[String] // team
             ),
-            winrate, GPM
+            winrate, GPM, KDA, KD, largestKillingSpree, totalDamageDealt, totalDamageDealtToChampions, totalDamageTaken, totalTimeCrowdControlDealt,
+            cs10, cs20, csDiff10, csDiff20, gpm10, gpm20, xpDiff10, xpDiff20
             )
         List(ret)
     }).toDF()
@@ -176,7 +270,11 @@ object Features {
     val mapping: Map[String, Column => Column] = Map("first" -> first)
 
     val groupBy = Seq("winningTeam", "matchId")
-    val aggregate = Seq("winrate", "GPM")
+    val aggregate = Seq(
+        "winrate", "GPM", "KDA", "KD", "largestKillingSpree", "totalDamageDealt",
+        "totalDamageDealtToChampions", "totalDamageTaken","totalTimeCrowdControlDealt",
+        "cs10", "cs20", "csDiff10", "csDiff20", "gpm10", "gpm20", "xpDiff10", "xpDiff20"
+        )
     val operations = Seq("first")
     val exprs = aggregate.flatMap(c => operations .map(f => mapping(f)(col(c))))
 
