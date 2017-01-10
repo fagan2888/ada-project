@@ -1,6 +1,9 @@
 import json
+import csv
+
 from riotAPI import RiotAPI, EUNE_ENDPOINT
 from crawler import crawl
+
 
 
 first_match = 1588970821
@@ -12,7 +15,7 @@ if __name__ == '__main__':
 
     riotAPI = RiotAPI(EUNE_ENDPOINT, API_KEY, 'production')
 
-    processed_matches, summ_matches, matches = crawl(riotAPI, 20, 100, first_match)
+    processed_matches, summ_matches, matches = crawl(riotAPI, 20, 1000, first_match)
 
 
 
@@ -20,6 +23,43 @@ if __name__ == '__main__':
       if isinstance(obj, set):
           return list(obj)
       raise TypeError
+
+    def processParticipant(participant):
+      return [
+        participant['summonerId'],
+        participant['lane'],
+        participant['role'],
+        participant['team'],
+        participant['winner'],
+        participant['goldEarned'],
+        participant['kills'],
+        participant['deaths'],
+        participant['assists'],
+        participant['largestKillingSpree'],
+        participant['totalDamageDealt'],
+        participant['totalDamageDealtToChampions'],
+        participant['totalDamageTaken'],
+        participant['totalTimeCrowdControlDealt'],
+        participant['csDiff10'],
+        participant['cs10'],
+        participant['gpm10'],
+        participant['xpDiff10'],
+        participant['csDiff20'],
+        participant['cs20'],
+        participant['gpm20'],
+        participant['xpDiff20']
+      ]
+
+    def matchToList(o):
+      fixed = [
+        o['matchId'],
+        o['matchDuration'],
+        o['region'],
+        o['queueType']
+      ]
+      participants = [item for participant in o['participants'] for item in processParticipant(participant)]
+
+      return fixed + participants
 
     # processed matches
     with open('processed_matches.json', 'w') as f:
@@ -32,6 +72,9 @@ if __name__ == '__main__':
       f.write(json.dumps(summ_matches_arr, default = set_default))
 
     # matches
-    with open('matches.json', 'w') as f:
-      matches_arr = [value for key, value in matches.items()]
-      f.write(json.dumps(matches_arr, default = set_default))
+    with open('matches.csv', 'w') as f:
+      matches_arr = [matchToList(value) for key, value in matches.items()]
+      csvWriter = csv.writer(f, delimiter=',', lineterminator='\n')
+      csvWriter.writerows(matches_arr)
+
+

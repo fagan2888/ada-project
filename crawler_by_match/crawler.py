@@ -3,6 +3,12 @@ from itertools import chain
 import concurrent.futures
 from collections import defaultdict
 
+from functools import reduce  # forward compatibility for Python 3
+import operator
+
+def getFromDict(dataDict, mapList):
+    return reduce(operator.getitem, mapList, dataDict)
+
 
 
 
@@ -44,11 +50,12 @@ def extract_summonerIds(match):
         return []
     return {pIdentity["player"]["summonerId"] for pIdentity in match["participantIdentities"]}
 
-def getKeyOrMissing(path, key):
-    if key in path:
-        return path[key]
-    else:
-        return -1
+def getKeyOrMissing(dict, path, missingVal):
+    try:
+        return getFromDict(dict, path)
+    except Exception as inst:
+        return missingVal
+
 
 
 def process_participant(participant, participantIdentity):
@@ -58,12 +65,31 @@ def process_participant(participant, participantIdentity):
         "role": participant["timeline"]["role"],
         "team": "blue" if (participant["teamId"] == 100) else "purple",
         "winner": participant["stats"]["winner"],
-        "goldEarned": participant["stats"]["goldEarned"]
-        # "gpm10": getKeyOrMissing(participant["timeline"]["goldPerMinDeltas"], "zeroToTen"),
+        "goldEarned": participant["stats"]["goldEarned"],
+        "kills": participant["stats"]["kills"],
+        "deaths": participant["stats"]["deaths"],
+        "assists": participant["stats"]["assists"],
+        "largestKillingSpree": participant["stats"]["largestKillingSpree"],
+        "totalDamageDealt": participant["stats"]["totalDamageDealt"],
+        "totalDamageDealtToChampions": participant["stats"]["totalDamageDealtToChampions"],
+        "totalDamageTaken": participant["stats"]["totalDamageTaken"],
+        "totalTimeCrowdControlDealt": participant["stats"]["totalTimeCrowdControlDealt"],
+
+        # timeline stuff
+        "csDiff10": getKeyOrMissing(participant, ["timeline", "csDiffPerMinDeltas", "zeroToTen"], 0),
+        "cs10": getKeyOrMissing(participant, ["timeline", "creepsPerMinDeltas", "zeroToTen"], 3),
+        "gpm10": getKeyOrMissing(participant, ["timeline", "goldPerMinDeltas", "zeroToTen"], 200),
+        "xpDiff10": getKeyOrMissing(participant, ["timeline", "xpDiffPerMinDeltas", "zeroToTen"], 0),
+        "csDiff20": getKeyOrMissing(participant, ["timeline", "csDiffPerMinDeltas", "tenToTwenty"], 0),
+        "cs20": getKeyOrMissing(participant, ["timeline", "creepsPerMinDeltas", "tenToTwenty"], 6),
+        "gpm20": getKeyOrMissing(participant, ["timeline", "goldPerMinDeltas", "tenToTwenty"], 400),
+        "xpDiff20": getKeyOrMissing(participant, ["timeline", "xpDiffPerMinDeltas", "tenToTwenty"], 0)
+
         # "gpm20": participant["timeline"]["goldPerMinDeltas"]["tenToTwenty"],
         # "gpm30": participant["timeline"]["goldPerMinDeltas"]["twentyToThirty"],
         # "gpmToEnd": participant["timeline"]["goldPerMinDeltas"]["thirtyToEnd"]
-    }
+        }
+
 
 def process_match(match):
     if ("status" in match): # fix for 404
@@ -76,7 +102,7 @@ def process_match(match):
         "matchDuration": match["matchDuration"],
         "participants": [process_participant(participant, participantIdentity) for (participant, participantIdentity) in zip(match["participants"], match["participantIdentities"])]
     }
-    # return match
+
 
 
 
