@@ -15,7 +15,7 @@ if __name__ == '__main__':
 
     riotAPI = RiotAPI(EUNE_ENDPOINT, API_KEY, 'production')
 
-    processed_matches, summ_matches, matches = crawl(riotAPI, 20, 1000, first_match)
+    processed_matches, summ_matches, matches = crawl(riotAPI, 20, 4000, first_match)
 
 
 

@@ -83,7 +83,6 @@ object Features {
     import sqlContext.implicits._
     implicit def bool2int(b:Boolean) = if (b) 1 else 0
 
-
     val inputPath = "hdfs:///user/ahaeflig/"
     val outputPath = "hdfs:///user/ahaeflig/out/"
 
@@ -223,7 +222,7 @@ object Features {
         // remove the tested match from the list of recent games
         val games = rows.toList.filter(x => x.matchId != matchId)
 
-        val totalGames = games.length
+        val totalGames = math.max(games.length, 1)
 
         /* winrate */
         val wins = games.foldLeft(0)((acc, game) => getInfos(game).winner.toInt + acc)
@@ -231,7 +230,7 @@ object Features {
         val winrate = wins.toFloat / totalGames
 
         /* GPM */
-        val GPM = 60f * games.foldLeft(0.toLong)((acc, game) => getInfos(game).goldEarned + acc).toFloat / games.foldLeft(0.toLong)((acc, game)  => game.matchDuration + acc)
+        val GPM = 60f * games.foldLeft(0.toLong)((acc, game) => getInfos(game).goldEarned + acc).toFloat / games.foldLeft(1.toLong)((acc, game)  => game.matchDuration + acc)
 
         /* KDA */
         val kills = games.foldLeft(0)((acc, game) => getInfos(game).kills.toInt + acc)
@@ -320,7 +319,7 @@ object Features {
 
     val out = features.groupBy(groupBy.map(col): _*).pivot("playerNum", (1 to 10).toList).agg(exprs.head, exprs.tail: _*)
 
-    // out.show
+    // out.coalesce(1).write.mode(SaveMode.Overwrite).format("com.databricks.spark.csv").save(outputPath + "out.csv")
 
     // // tmp
     // val tmp = participants_matches_ids.select($"summ_id", $"p_match_id", $"matches").map(x => (x(0).asInstanceOf[String], x(1).asInstanceOf[String], x(2).asInstanceOf[WrappedArray[String]].length)).toDF("a", "b", "c")
