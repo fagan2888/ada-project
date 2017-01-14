@@ -1,4 +1,7 @@
 import tensorflow as tf
+import pickle
+import numpy as np
+
 
 
 def initTF():
@@ -15,6 +18,17 @@ def initTF():
   n_classes = 2
 
   x = tf.placeholder('float', [None, feature_count])
+
+  f = open('../Model/mean.pckl', 'rb')
+  meanX = pickle.load(f)
+  f.close()
+  f = open('../Model/std.pckl', 'rb')
+  stdX = pickle.load(f)
+  f.close()
+
+  def standardize(X):
+    return (X - meanX) / stdX
+
 
   def neural_network_model(data):
 
@@ -68,11 +82,14 @@ def initTF():
   new_saver = tf.train.import_meta_graph(model_path + "/model.ckpt.meta")
   new_saver.restore(sess, tf.train.latest_checkpoint(model_path))
 
-  return sess, prob, x
+  return sess, prob, x, standardize
 
-def runTF(sess, prob, x, features):
+def runTF(sess, prob, x, features, standardize):
+
+  print(features)
+  print(standardize(features))
 
   with sess.as_default():
-      prob_value = prob.eval(feed_dict={x: features})
+      prob_value = prob.eval(feed_dict={x: standardize(features)})
 
   return prob_value[0][0]

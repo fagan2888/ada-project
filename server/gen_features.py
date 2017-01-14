@@ -4,16 +4,13 @@ from riotAPI import RiotAPI, EUNE_ENDPOINT
 import pandas as pd
 
 
-def get_features():
+def get_features(summs):
   matchesPerSummoner = 20
 
   with open('api_key.txt') as f:
       API_KEY = f.read().strip()
 
   riotAPI = RiotAPI(EUNE_ENDPOINT, API_KEY, 'production')
-
-
-  summs = ['31858318', '42270213', '56396690', '45290268', '53012710', '31877470', '19931164', '30857494', '24752272', '62835377'] # tmp
 
   player_matches, last_matches = get_last_matches(summs, {}.keys(), riotAPI, matchesPerSummoner)
 
