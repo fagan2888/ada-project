@@ -1,5 +1,6 @@
 # [EPFL](http://www.epfl.ch/) [Applied Data Analysis](http://ada.epfl.ch/) Project
 
+A demo can be found [here](http://52.174.16.86:5000/)
 
 ##Abstract
   This project will crawl publicly available **League of Legends** match information using the Riot api and apply a 2-step process to it. Firstly, we will extract player features. Secondly, we will feed them to a neural network predicting the winning chance in a new match based on the players' features and the role they will be playing.
