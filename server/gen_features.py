@@ -4,13 +4,23 @@ from riotAPI import RiotAPI, EUNE_ENDPOINT
 import pandas as pd
 
 
-def get_features(summs):
-  matchesPerSummoner = 20
-
+def init_API():
   with open('api_key.txt') as f:
       API_KEY = f.read().strip()
 
   riotAPI = RiotAPI(EUNE_ENDPOINT, API_KEY, 'production')
+
+  return riotAPI
+
+def get_id(name, riotAPI):
+  res = riotAPI.summoner([name])
+  if ('status' in res and 'status_code' in res['status']): # user not found
+    return ''
+  else:
+    return str(res[name]['id'])
+
+def get_features(summs, riotAPI):
+  matchesPerSummoner = 20
 
   player_matches, last_matches = get_last_matches(summs, {}.keys(), riotAPI, matchesPerSummoner)
 
@@ -98,7 +108,7 @@ def gen_features(summs, player_matches, last_matches):
           })
 
 
-  df_features = pd.merge(df_summs, df_player_matches, left_on = 'summ_id', right_on = 'summ_id').set_index('match_id').join(df_matches).groupby(['summ_id']).apply(gen_player_features)
+  df_features = pd.merge(df_summs, df_player_matches, left_on = 'summ_id', right_on = 'summ_id').set_index('match_id').join(df_matches).groupby(['summ_id', 'player_num']).apply(gen_player_features)
   df_features = df_features.ix[:, ["player_num", "winrate", "GPM", "KDA", "KD", "largestKillingSpree", "totalDamageDealt",
           "totalDamageDealtToChampions", "totalDamageTaken","totalTimeCrowdControlDealt",
           "cs10", "cs20", "csDiff10", "csDiff20", "gpm10", "gpm20", "xpDiff10", "xpDiff20"]].set_index(['player_num'])

@@ -11,9 +11,9 @@ def initTF():
 
   feature_count = 170
 
-  n_nodes_hl1 = 150
-  n_nodes_hl2 = 150
-  n_nodes_hl3 = 150
+  n_nodes_hl1 = 100
+  n_nodes_hl2 = 50
+  n_nodes_hl3 = 20
 
   n_classes = 2
 
