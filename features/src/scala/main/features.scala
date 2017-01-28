@@ -11,7 +11,7 @@ import _root_.org.apache.spark.sql.Row
 import _root_.org.apache.spark.sql.functions.{col, first}
 import _root_.org.apache.spark.sql.Column
 
-case class ParticipantInfo(
+case class ParticipantInfo (
     summonerId: String,
     lane: String,
     role: String,
@@ -36,7 +36,7 @@ case class ParticipantInfo(
     xpDiff20:Double
 )
 
-case class Match(
+case class Match (
     matchId: String,
     matchDuration: Long,
     region: String,
@@ -44,11 +44,21 @@ case class Match(
     participants: Array[ParticipantInfo]
 )
 
-case class ParticipantMatch(matchId: String, summ_id: String, p_match_id: String, summ_pos: Int, team: String, winner: Boolean,  matchDuration: Long, participants: Array[ParticipantInfo])
+case class ParticipantMatch (
+    matchId: String,
+    summ_id: String,
+    p_match_id: String,
+    summ_pos: Int,
+    team: String,
+    winner: Boolean,
+    matchDuration: Long,
+    participants: Array[ParticipantInfo]
+)
 
-case class Ret(
+case class Ret (
     winningTeam: String,
     matchId: String,
+    summId: String,
     playerNum: Int,
     winrate: Float,
     GPM: Float,
@@ -211,7 +221,7 @@ object Features {
 
 
     // generate features
-    val features = participants_matches.groupBy($"p_match_id", $"summ_id", $"summ_pos", $"team", $"winner").flatMapGroups((key, rows) => {
+    def generateFeatures(key:Row, rows:Iterator[ParticipantMatch]):List[Ret] = {
         val summId = key(1).asInstanceOf[String]
 
         def getInfos(participantMatch:ParticipantMatch):ParticipantInfo = {
@@ -291,7 +301,7 @@ object Features {
         val ret = Ret(
             winningTeam(key(4).asInstanceOf[Boolean], key(3).asInstanceOf[String]), // winning team
             key(0).asInstanceOf[String], // match_id
-            // key(1).asInstanceOf[String], // summ_id
+            key(1).asInstanceOf[String], // summ_id
             computePlayerNum(
                 key(2).asInstanceOf[Int], // pos
                 key(3).asInstanceOf[String] // team
@@ -300,10 +310,9 @@ object Features {
             cs10, cs20, csDiff10, csDiff20, gpm10, gpm20, xpDiff10, xpDiff20
             )
         List(ret)
-    }).toDF()
+    }
 
-    // out of memory in spark-shell?
-    // features_f.select($"c").groupBy($"c").count().show()
+    val features = participants_matches.groupBy($"p_match_id", $"summ_id", $"summ_pos", $"team", $"winner").flatMapGroups(generateFeatures).toDF()
 
     // pivot (reshape long to wide)
     val mapping: Map[String, Column => Column] = Map("first" -> first)
@@ -317,7 +326,9 @@ object Features {
     val operations = Seq("first")
     val exprs = aggregate.flatMap(c => operations .map(f => mapping(f)(col(c))))
 
-    val out = features.groupBy(groupBy.map(col): _*).pivot("playerNum", (1 to 10).toList).agg(exprs.head, exprs.tail: _*)
+    val out_features = features.groupBy(Seq("winningTeam", "matchId").map(col): _*).pivot("playerNum", (1 to 10).toList).agg(exprs.head, exprs.tail: _*)
+
+    val out_players = features.groupBy(Seq("summId").map(col): _*).agg(exprs.head, exprs.tail: _*)
 
     // out.coalesce(1).write.mode(SaveMode.Overwrite).format("com.databricks.spark.csv").save(outputPath + "out.csv")
 
@@ -336,7 +347,9 @@ object Features {
 
 
 
-    out.coalesce(1).write.mode(SaveMode.Overwrite).format("com.databricks.spark.csv").save(outputPath + "out.csv")
+    out_features.coalesce(1).write.mode(SaveMode.Overwrite).format("com.databricks.spark.csv").save(outputPath + "out_features.csv")
+
+    out_players.coalesce(1).write.mode(SaveMode.Overwrite).format("com.databricks.spark.csv").save(outputPath + "out_players.csv")
 
     sc.stop()
   }
