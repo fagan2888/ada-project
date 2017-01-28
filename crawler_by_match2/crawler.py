@@ -93,7 +93,7 @@ def process_match(match):
     }
 
 
-def get_last_matches(summoners_list, matches_keys, riotAPI, matchesPerSummoner):
+def get_last_matches(summoners_list, matches_ids, riotAPI, matchesPerSummoner):
     def get_matchlist(sid):
         r = riotAPI.matchlist(sid)
         matchIds = extract_matchIds(r)[:matchesPerSummoner]
@@ -103,7 +103,7 @@ def get_last_matches(summoners_list, matches_keys, riotAPI, matchesPerSummoner):
         future_to_list = {executor.submit(get_matchlist, id): id for id in summoners_list}
         player_matches = {future_to_list[future]: set(future.result()) for future in concurrent.futures.as_completed(future_to_list)}
         # set to remove duplicates
-        matches_to_fetch = {match for key, sublist in player_matches.items() for match in sublist if match not in matches_keys}
+        matches_to_fetch = {match for key, sublist in player_matches.items() for match in sublist if match not in matches_ids}
 
     with concurrent.futures.ThreadPoolExecutor(max_workers = 50) as executor:
         future_to_match = {executor.submit(riotAPI.match, mId): mId for mId in matches_to_fetch}
@@ -112,21 +112,26 @@ def get_last_matches(summoners_list, matches_keys, riotAPI, matchesPerSummoner):
     return (player_matches, {match_id: match for match_id, match in matches.items() if match is not None})
 
 
-def crawl(riotAPI, matchesPerSummoner, matchesNum, startId, aborted=lambda: False, prevResult=None):
+def crawl(riotAPI, matchesPerSummoner, matchesNum, startId, matchSaver, aborted=lambda: False, prevResult=None):
     if prevResult is None:
-        available_matches = set([startId])
+        available_matches = {startId}
         processed_matches = list()
-        matches = {startId: process_match(riotAPI.match(startId))}
+        matches = set()
         summ_matches = defaultdict(set)
     else:
         processed_matches, summ_matches, matches = prevResult
-        available_matches = set(matches.keys()) - set(processed_matches)
+        available_matches = set(matches) - set(processed_matches)
 
     while len(processed_matches) < matchesNum and not aborted():
         mID = available_matches.pop()
-        summs_to_fetch = extract_summonerIds(matches[mID])
-
-        player_matches, last_matches = get_last_matches(summs_to_fetch, matches.keys(), riotAPI, matchesPerSummoner)
+        try:
+            match = process_match(riotAPI.match(mID))
+            summs_to_fetch = extract_summonerIds(match)
+            player_matches, last_matches = get_last_matches(summs_to_fetch, matches, riotAPI, matchesPerSummoner)
+        except Exception as e:
+            available_matches.add(mID)
+            print(e, file=sys.stderr)
+            break
 
         # add the current match to the list of matches with complete info (x last games of each participant)
         processed_matches.append(mID)
@@ -134,11 +139,14 @@ def crawl(riotAPI, matchesPerSummoner, matchesNum, startId, aborted=lambda: Fals
         # add new fetched matches_ids to players
         merge_dicts(summ_matches, player_matches)
 
-        # add new fetched matches to global list
-        matches.update(last_matches)
+        # add new fetched matches_ids to global set of matches
+        matches.update(last_matches.keys())
 
-        # add new fetched matches ids to list of matches to fetch completely (can remove some duplication)
-        available_matches = available_matches | {match for match in last_matches.keys() if match not in processed_matches}
+        # save new fetched matches data
+        matchSaver.saveMatches(last_matches.values())
+
+        # add new fetched matches ids to list of matches to fetch completely
+        available_matches.update(last_matches.keys())
 
     print(len(available_matches))
     print(processed_matches)
