@@ -199,7 +199,6 @@ var notRefreshed = true;
 function refreshGrid () {
   setTimeout(function() {
     if (notRefreshed) {
-      console.log('refresh')
       $('.grid').masonry({
           itemSelector: '.col',
       });
