@@ -8,6 +8,7 @@ app.controller('statsCtrl', function($scope, $http) {
     $scope.stats = response.data;
   });
 
+
   $scope.cumulative = false;
 
   $scope.features = [
@@ -184,10 +185,28 @@ app.directive('d3Hist', function($timeout, $window) {
                  .attr( "stroke", "red" )
                  .attr( "stroke-width", "2" )
             }
-
+            refreshGrid();
           }
         });
       });
     }
   };
 });
+
+var notRefreshed = true;
+
+// watcher for masonry
+function refreshGrid () {
+  setTimeout(function() {
+    if (notRefreshed) {
+      console.log('refresh')
+      $('.grid').masonry({
+          itemSelector: '.col',
+      });
+      notRefreshed = false;
+      setTimeout(function() {
+        notRefreshed = true;
+      }, 5);
+    }
+  }, 5);
+}

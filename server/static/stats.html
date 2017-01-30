@@ -40,6 +40,8 @@
   <link rel="stylesheet" href="http://ajax.googleapis.com/ajax/libs/angular_material/1.1.0/angular-material.min.css">
   <script src="http://ajax.googleapis.com/ajax/libs/angular_material/1.1.0/angular-material.min.js"></script>
 
+  <script src="https://unpkg.com/masonry-layout@4/dist/masonry.pkgd.min.js"></script>
+
 
   <link rel="stylesheet" href="style.css"></script>
   <script src="statsCtrl.js"></script>
@@ -100,10 +102,12 @@
       </div>
     </div>
     <div class="row">
+      <div class="grid">
       <div class="col s12 l6" ng-repeat="feature in features">
         {{feature.text}}:
         <d3-hist data="stats[feature.key]" cumulative="cumulative" player-value="player_features? player_features[feature.key]: null"></d3-hist>
       </div>
+    </div>
     </div>
   </div>
   <script src="init.js"></script>
