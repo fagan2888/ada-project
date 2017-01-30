@@ -17,7 +17,7 @@ def get_id(name, riotAPI):
   if ('status' in res and 'status_code' in res['status']): # user not found
     return ''
   else:
-    return str(res[name]['id'])
+    return str(res[name.replace(" ", "")]['id'])
 
 def get_features(summs, riotAPI):
   matchesPerSummoner = 20
