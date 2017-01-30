@@ -7,12 +7,12 @@ import contextlib
 import os
 import shutil
 
-from riotAPI import RiotAPI, EUNE_ENDPOINT
+from riotAPI import RiotAPI, EUW_ENDPOINT
 from matchSaver import MatchSaver
 from crawler import crawl
 
 
-first_match = 1588970821
+first_match = 3017449777
 
 
 if __name__ == '__main__':
@@ -37,7 +37,7 @@ if __name__ == '__main__':
     with contextlib.closing(args.api_key):
         API_KEY = args.api_key.read().strip()
 
-    riotAPI = RiotAPI(EUNE_ENDPOINT, API_KEY, 'production')
+    riotAPI = RiotAPI(EUW_ENDPOINT, API_KEY, 'production')
 
     # Ensure the output directory exists.
     try:
@@ -54,7 +54,7 @@ if __name__ == '__main__':
         prevResultPath = os.path.join(args.resume, 'result.pickle')
         with open(prevResultPath, 'rb') as f:
             prevResult = pickle.load(f)
-        
+
         if args.directory != args.resume:
             shutil.copy(os.path.join(args.resume, 'matches.csv'), args.directory)
 
@@ -74,12 +74,12 @@ if __name__ == '__main__':
     matchesFile.close()
 
     os.chdir(args.directory)
-    
+
     def set_default(obj):
       if isinstance(obj, set):
           return list(obj)
       raise TypeError
-    
+
     # processed matches
     with open('processed_matches.json', 'w') as f:
       processed_matches_arr = [{"p_match_id": str(id)} for id in processed_matches]

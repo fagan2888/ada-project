@@ -2,6 +2,8 @@
 *.pyo
 api_key.txt
 
+*.csv
+
 *.class
 *.log
 

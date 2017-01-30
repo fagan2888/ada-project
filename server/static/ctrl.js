@@ -30,7 +30,7 @@ app.controller('appCtrl', function($scope, $http) {
 
   // generate mock
   $scope.generateMock = function() {
-    $scope.rawData = '["31858318", "42270213", "56396690", "45290268", "53012710", "31877470", "19931164", "30857494", "24752272", "62835377"]';
+    $scope.rawData = '["51878309", "22192141", "28239076", "34358720", "35527349", "20391818", "51399696", "44405988", "50740446", "21344514"]';
   }
 
   // watch the content of the 2 comp variables and update the final data
