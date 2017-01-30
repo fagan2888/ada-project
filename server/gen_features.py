@@ -1,5 +1,5 @@
 from crawler import get_last_matches
-from riotAPI import RiotAPI, EUNE_ENDPOINT
+from riotAPI import RiotAPI, EUW_ENDPOINT
 
 import pandas as pd
 
@@ -8,7 +8,7 @@ def init_API():
   with open('api_key.txt') as f:
       API_KEY = f.read().strip()
 
-  riotAPI = RiotAPI(EUNE_ENDPOINT, API_KEY, 'production')
+  riotAPI = RiotAPI(EUW_ENDPOINT, API_KEY, 'production')
 
   return riotAPI
 

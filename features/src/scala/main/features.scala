@@ -252,7 +252,7 @@ object Features {
 
         def averageInt(getMember: ParticipantInfo => Int): Float = {
             def summed = games.foldLeft(0)((acc, game) => getMember(getInfos(game)) + acc)
-            math.max(summed, 1).toFloat / totalGames
+            summed.toFloat / totalGames
         }
 
         /* largestKillingSpree */
@@ -273,7 +273,7 @@ object Features {
         /* timeline stuff */
         def averageDouble(getMember: ParticipantInfo => Double): Float = {
             def summed = games.foldLeft(0.0)((acc, game) => getMember(getInfos(game)) + acc)
-            math.max(summed, 1).toFloat / totalGames
+            summed.toFloat / totalGames
         }
 
         val cs10 = averageDouble(_.cs10)
