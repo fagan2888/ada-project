@@ -34,7 +34,7 @@ case class ParticipantInfo (
     cs20: Double,
     gpm20: Double,
     xpDiff20:Double
-)
+    )
 
 case class Match (
     matchId: String,
@@ -42,7 +42,7 @@ case class Match (
     region: String,
     queueType: String,
     participants: Array[ParticipantInfo]
-)
+    )
 
 case class ParticipantMatch (
     matchId: String,
@@ -53,7 +53,7 @@ case class ParticipantMatch (
     winner: Boolean,
     matchDuration: Long,
     participants: Array[ParticipantInfo]
-)
+    )
 
 case class Ret (
     winningTeam: String,
@@ -77,7 +77,7 @@ case class Ret (
     gpm20: Float,
     xpDiff10: Float,
     xpDiff20: Float
-)
+    )
 
 
 
@@ -87,19 +87,20 @@ object Features {
     val conf = new SparkConf().setAppName("Features gen")
 //                 .setMaster("yarn-cluster")
 
-    val sc = new SparkContext(conf)
+val sc = new SparkContext(conf)
 
-    val sqlContext = new org.apache.spark.sql.SQLContext(sc)
-    import sqlContext.implicits._
-    implicit def bool2int(b:Boolean) = if (b) 1 else 0
+val sqlContext = new org.apache.spark.sql.SQLContext(sc)
+import sqlContext.implicits._
+implicit def bool2int(b:Boolean) = if (b) 1 else 0
 
-    val inputPath = "hdfs:///user/ahaeflig/"
-    val outputPath = "hdfs:///user/ahaeflig/out/"
+val inputPath = "hdfs:///user/ahaeflig/"
+val outputPath = "hdfs:///user/ahaeflig/out/"
 
     // val inputPath = "file:///Users/Marco/Google Drive/HEC/ada/proj/repo/ada-project/crawler_by_match/"
     // val outputPath = "file:///Users/Marco/Google Drive/HEC/ada/proj/repo/ada-project/out/"
 
-    val processed_matches = sqlContext.read.json(inputPath + "processed_matches.json")
+    val processed_matches2 = sqlContext.read.json(inputPath + "processed_matches.json")
+    val processed_matches =
 
     val summs_matches = sqlContext.read.json(inputPath + "summ_matches.json")
 
@@ -174,14 +175,14 @@ object Features {
         }
 
         val participant_info = x(4) match {
-                case matchInfo: WrappedArray[Row] => matchInfo.map(p => (
+            case matchInfo: WrappedArray[Row] => matchInfo.map(p => (
                     generate_pos(p(1), p(2)), // pos_num (lane, role)
                     p(0).asInstanceOf[String], // summoner_id
                     p(3).asInstanceOf[String], // team
                     p(4).asInstanceOf[Boolean], // winner
                     p(5).asInstanceOf[Long] // gold (tmp for the pos finding)
-                ))
-            }
+                    ))
+        }
 
         // sort the players that didn't get a pos by their gold to fill the gaps
         val final_participant_info = participant_info.map(matchInfo => (
@@ -200,24 +201,23 @@ object Features {
     val participants_flat = participants.explode("summs_infos", "summ_info"){x:WrappedArray[(Integer, String, String, Boolean)] => x}.
     drop("summs_infos").map(x => {
         val participant_info = x(1) match {
-                case p: Row => (p(0).asInstanceOf[Integer], p(1).asInstanceOf[String], p(2).asInstanceOf[String], p(3).asInstanceOf[Boolean])
+            case p: Row => (p(0).asInstanceOf[Integer], p(1).asInstanceOf[String], p(2).asInstanceOf[String], p(3).asInstanceOf[Boolean])
                 // case _ => ("a", "a")
             }
-        (x(0).asInstanceOf[String], participant_info._1, participant_info._2, participant_info._3, participant_info._4)
-        }).toDF("p_match_id", "summ_pos", "summ_id", "team", "winner")
+            (x(0).asInstanceOf[String], participant_info._1, participant_info._2, participant_info._3, participant_info._4)
+            }).toDF("p_match_id", "summ_pos", "summ_id", "team", "winner")
 
-
-    // participants_flat.select("summ_pos").groupBy("summ_pos").count().show()
-    // participants_flat.filter(participants_flat("summ_pos") === "0").show
 
     // join with the list of matches of the player (on summ_id)
     val participants_matches_ids = participants_flat.join(summs_matches, "summ_id")
 
     // flatten the list of matches
-    val participants_matches_ids_flat = participants_matches_ids.explode("matches", "matchId"){x:WrappedArray[String] => x}.drop("matches")
+    val participants_matches_ids_flat = participants_matches_ids
+        .explode("matches", "matchId"){x:WrappedArray[String] => x}.drop("matches")
 
     // join with the matches (on match_id)  and convert to dataset
-    val participants_matches = participants_matches_ids_flat.join(matches.select($"matchId", $"matchDuration", $"participants"), "matchId").as[ParticipantMatch]
+    val participants_matches = participants_matches_ids_flat.join(matches
+        .select($"matchId", $"matchDuration", $"participants"), "matchId").as[ParticipantMatch]
 
 
     // generate features
@@ -240,7 +240,9 @@ object Features {
         val winrate = wins.toFloat / totalGames
 
         /* GPM */
-        val GPM = 60f * games.foldLeft(0.toLong)((acc, game) => getInfos(game).goldEarned + acc).toFloat / games.foldLeft(1.toLong)((acc, game)  => game.matchDuration + acc)
+        val GPM = 60f * games.foldLeft(0.toLong)((acc, game) =>
+            getInfos(game).goldEarned + acc).toFloat / games.foldLeft(1.toLong)((acc, game)
+                => game.matchDuration + acc)
 
         /* KDA */
         val kills = games.foldLeft(0)((acc, game) => getInfos(game).kills.toInt + acc)
@@ -264,10 +266,10 @@ object Features {
         /* totalDamageDealtToChampions */
         val totalDamageDealtToChampions = averageInt(_.totalDamageDealtToChampions.toInt)
 
-       /* totalDamageTaken */
+        /* totalDamageTaken */
         val totalDamageTaken = averageInt(_.totalDamageTaken.toInt)
 
-       /* totalTimeCrowdControlDealt */
+        /* totalTimeCrowdControlDealt */
         val totalTimeCrowdControlDealt = averageInt(_.totalTimeCrowdControlDealt.toInt)
 
         /* timeline stuff */
@@ -305,7 +307,7 @@ object Features {
             computePlayerNum(
                 key(2).asInstanceOf[Int], // pos
                 key(3).asInstanceOf[String] // team
-            ),
+                ),
             winrate, GPM, KDA, KD, largestKillingSpree, totalDamageDealt, totalDamageDealtToChampions, totalDamageTaken, totalTimeCrowdControlDealt,
             cs10, cs20, csDiff10, csDiff20, gpm10, gpm20, xpDiff10, xpDiff20
             )
@@ -352,5 +354,5 @@ object Features {
     out_players.coalesce(1).write.mode(SaveMode.Overwrite).format("com.databricks.spark.csv").save(outputPath + "out_players.csv")
 
     sc.stop()
-  }
+}
 }
