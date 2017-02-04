@@ -5,7 +5,7 @@ import numpy as np
 
 
 def initTF():
-  model_path = "../Model/tmp2"
+  model_path = "../Model/finalmodel"
 
   seed = 42
 
