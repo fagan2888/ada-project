@@ -2,6 +2,12 @@
 
 A demo can be found [here](http://52.174.16.86:5000/)
 
+## Structure
+* Run the crawler to get matches
+* Run the feature generating code on spark to generate features out of the matches
+* Train the Model (Neural Network) on the features
+* Reuse the trained model on the server
+
 ##Abstract
   This project will crawl publicly available **League of Legends** match information using the Riot api and apply a 2-step process to it. Firstly, we will extract player features. Secondly, we will feed them to a neural network predicting the winning chance in a new match based on the players' features and the role they will be playing.
   The features retained during the tuning of the model will be made available and visualized on a player page to show relevant information.
@@ -40,21 +46,3 @@ A demo can be found [here](http://52.174.16.86:5000/)
 ##Deliverable:
   Viz of some features (scoring singular players, aggregated statistics per role, distribution of main role played by ranking)
   predicting platform that takes the id (name and region) and role of the present players and returns the winning chance of each side
-
-##Timeplan:
- * *Mid-November*:
-   * Get accustomed to the match api and have a basic query system working
-
- * *Early December*:
-   * Have a continuous crawling system allowing us to get offline data (at least last 3 months of data for a region)
-   * Initial features generating system + prediction system
-
- * *Mid-December*:
-   * Tune the features to improve the prediction accuracy
-
- * *End of December*:
-   * Build an online prediction system that takes players + roles in a match and returns winning chances
-
- * *January*:
-   * Create an online viz of the features identified during the tuning (by player)
-   * Create a viz of the evolution of the champion features (wrt time)
