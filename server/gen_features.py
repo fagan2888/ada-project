@@ -20,6 +20,7 @@ def get_id(name, riotAPI):
     return str(res[name.replace(" ", "")]['id'])
 
 def get_features(summs, riotAPI):
+  "get the last 20 matches of the given summoners"
   matchesPerSummoner = 20
 
   player_matches, last_matches = get_last_matches(summs, {}.keys(), riotAPI, matchesPerSummoner)
@@ -27,6 +28,7 @@ def get_features(summs, riotAPI):
   return gen_features(summs, player_matches, last_matches)
 
 def gen_features(summs, player_matches, last_matches):
+  "generate the features from the last matches"
   summs_idx = [{'summ_id': summ, 'player_num': idx} for idx, summ in enumerate(summs)]
   df_summs = pd.DataFrame(summs_idx)
 

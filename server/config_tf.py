@@ -5,13 +5,8 @@ import numpy as np
 
 
 def initTF():
+  "load the saved model"
   model_path = "../Model/finalmodel"
-
-  seed = 42
-
-  feature_count = 170
-
-  n_classes = 2
 
   f = open('../Model/mean.pckl', 'rb')
   meanX = pickle.load(f)
@@ -32,7 +27,7 @@ def initTF():
   return sess, standardize
 
 def runTF(sess, features, standardize):
-
+  "run the forecasting using the the loaded model"
   print(features)
   print(standardize(features))
 

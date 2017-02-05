@@ -14,6 +14,9 @@ riotAPI = init_API()
 
 @app.route('/forecast', methods=['POST'])
 def forecast():
+  """Takes the ordered summoner ids of the participants, gives them to the NN prediction function
+  and returns the predicted win chance
+  """
 
   summs = json.loads(request.form['summs'])
   features = get_features(summs, riotAPI)
@@ -24,9 +27,8 @@ def forecast():
 
 @app.route('/test', methods=['GET'])
 def test():
-  # summs = ['51878309', '22192141', '28239076', '34358720', '35527349', '20391818', '51399696', '44405988', '50740446', '21344514']
-  summs = ['20391818', '51399696', '44405988', '50740446', '21344514', '51878309', '22192141', '28239076', '34358720', '35527349']
-
+  summs = ['20391818', '51399696', '44405988', '50740446', '21344514', '51878309', '22192141',
+    '28239076', '34358720', '35527349']
 
   features = get_features(summs, riotAPI)
 
@@ -36,11 +38,14 @@ def test():
 
 @app.route('/name', methods=['GET'])
 def name():
+  "Returns the summoner id for a given summoner name or an empty value if not found"
+
   name = request.args['name'].lower()
   return get_id(name, riotAPI)
 
 @app.route('/features', methods=['GET'])
 def features():
+  "Returns the generated features for the given summoner id"
   id = request.args['id'].lower()
   return jsonify(get_features([id], riotAPI))
 
