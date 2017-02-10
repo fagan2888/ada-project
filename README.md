@@ -2,6 +2,8 @@
 
 A demo can be found [here](http://52.174.16.86:5000/)
 
+Slides [here](https://docs.google.com/presentation/d/1psaRhzOgpAPdy1Q8QbmdKBDVvNdupFURJEa9yMjkvuE/edit#slide=id.p)
+
 ## Structure
 * Run the crawler to get matches
 * Run the feature generating code on spark to generate features out of the matches
